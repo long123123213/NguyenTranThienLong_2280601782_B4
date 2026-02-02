@@ -1167,10 +1167,28 @@ let data = [
 router.get('/', function (req, res, next) {
   let queries = req.query;
   let titleQ = queries.title ? queries.title : '';
-  let minPrice = queries.minPrice ? queries.minPrice : 0;
-  let maxPrice = queries.maxPrice ? queries.maxPrice : 1E6;
-  let page = queries.page ? queries.page : 1;
-  let limit = queries.limit ? queries.limit : 10;
+  let minPrice = queries.minPrice ? parseFloat(queries.minPrice) : 0;
+  let maxPrice = queries.maxPrice ? parseFloat(queries.maxPrice) : 1E6;
+  let page = queries.page ? parseInt(queries.page) : 1;
+  let limit = queries.limit ? parseInt(queries.limit) : 10;
+
+  // Validation
+  if (isNaN(page) || page <= 0) {
+    return res.status(400).send({
+      "message": "Page must be a positive integer"
+    });
+  }
+  if (isNaN(limit) || limit <= 0) {
+    return res.status(400).send({
+      "message": "Limit must be a positive integer"
+    });
+  }
+  if (maxPrice < minPrice) {
+    return res.status(400).send({
+      "message": "maxPrice must be greater than or equal to minPrice"
+    });
+  }
+
   console.log(queries);
   let result = data.filter(
     function (e) {
@@ -1197,8 +1215,36 @@ router.get('/:id', function (req, res, next) {
   }
 });
 
+//get by slug
+router.get('/slug/:slug', function (req, res, next) {
+  let result = data.find(
+    function (e) {
+      return e.slug === req.params.slug && (!e.isDeleted);
+    }
+  )
+  if (result) {
+    res.send(result);
+  } else {
+    res.status(404).send({
+      "message": "slug not found"
+    });
+  }
+});
+
 
 router.post('/', function (req, res, next) {
+  // Validation
+  if (!req.body.title || !req.body.price || !req.body.description || !req.body.category || !req.body.images) {
+    return res.status(400).send({
+      "message": "All fields (title, price, description, category, images) are required"
+    });
+  }
+  if (isNaN(req.body.price) || req.body.price <= 0) {
+    return res.status(400).send({
+      "message": "Price must be a positive number"
+    });
+  }
+
   let newObj = {
     id: (getMaxID(data) + 1) + '',
     title: req.body.title,
